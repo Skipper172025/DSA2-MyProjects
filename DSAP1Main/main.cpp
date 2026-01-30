@@ -3,7 +3,9 @@
 #include <string>
 #include <cstdlib>
 #include <ctime>
+#include <vector>
 #include "VigenereCipher.hpp"
+#include "HashTable.hpp"
 
 using namespace std;
 
@@ -79,7 +81,6 @@ int main() {
     string userid, password;
     
     while (rawFile >> userid >> password) {
-        // Use the cipher object to encrypt
         string encryptedPassword = cipher.encrypt(password);
         encryptedFile << userid << " " << encryptedPassword << endl;
     }
@@ -87,7 +88,93 @@ int main() {
     rawFile.close();
     encryptedFile.close();
     
-    cout << "Files created successfully." << endl;
+    // Build hash table and test
+    // Create hash table
+    HashTable hashTable(10000);
+    
+    // Load encrypteddata.txt into hash table
+    ifstream encFile("encrypteddata.txt");
+    if (!encFile.is_open()) {
+        cerr << "Error: Could not open encrypteddata.txt" << endl;
+        return 1;
+    }
+    
+    while (encFile >> userid >> password) {
+        hashTable.insert(userid, password);
+    }
+    encFile.close();
+    
+    // Store entries from rawdata.txt for testing
+    vector<pair<string, string>> rawEntries;
+    ifstream rawTestFile("rawdata.txt");
+    if (!rawTestFile.is_open()) {
+        cerr << "Error: Could not open rawdata.txt for testing" << endl;
+        return 1;
+    }
+    
+    while (rawTestFile >> userid >> password) {
+        rawEntries.push_back(make_pair(userid, password));
+    }
+    rawTestFile.close();
+    
+    // Test entries 1, 3, 5, 7, 9 (indices 0, 2, 4, 6, 8)
+    int testIndices[] = {0, 2, 4, 6, 8};
+    
+    cout << "\nLegal:" << endl;
+    cout << "Userid\t\tPassword(file)\tPassword(table/un)\tResult" << endl;
+    
+    for (int i = 0; i < 5; i++) {
+        int idx = testIndices[i];
+        if (idx < rawEntries.size()) {
+            string testUserid = rawEntries[idx].first;
+            string testPassword = rawEntries[idx].second;
+            
+            // Encrypt the password from rawdata.txt
+            string encryptedTest = cipher.encrypt(testPassword);
+            
+            // Search in hash table
+            string tablePassword = hashTable.search(testUserid);
+            
+            // Compare
+            string result = (encryptedTest == tablePassword) ? "match" : "no match";
+            
+            cout << testUserid << "\t\t" << testPassword << "\t" << testPassword 
+                 << "\t" << result << endl;
+        }
+    }
+    
+    cout << "\nIllegal:" << endl;
+    cout << "Userid\t\tPassword(mod)\tPassword(table/un)\tResult" << endl;
+    
+    for (int i = 0; i < 5; i++) {
+        int idx = testIndices[i];
+        if (idx < rawEntries.size()) {
+            string testUserid = rawEntries[idx].first;
+            string testPassword = rawEntries[idx].second;
+            
+            // Modify first character to 'z' (or 'a' if already 'z')
+            if (testPassword[0] == 'z') {
+                testPassword[0] = 'a';
+            } else {
+                testPassword[0] = 'z';
+            }
+            
+            // Encrypt the modified password
+            string encryptedTest = cipher.encrypt(testPassword);
+            
+            // Search in hash table
+            string tablePassword = hashTable.search(testUserid);
+            
+            // Get original password for display
+            string originalPassword = rawEntries[idx].second;
+            
+            // Compare
+            string result = (encryptedTest == tablePassword) ? "match" : "no match";
+            
+            cout << testUserid << "\t\t" << testPassword << "\t" << originalPassword 
+                 << "\t" << result << endl;
+        }
+    }
     
     return 0;
 }
