@@ -32,6 +32,7 @@ int main() {
     // Create Vigenere Cipher with key "jones"
     VigenereCipher cipher("jones");
     
+    // Generate rawdata.txt
     ifstream inputFile("names.txt");
     if (!inputFile.is_open()) {
         cerr << "Error: Could not open names.txt" << endl;
